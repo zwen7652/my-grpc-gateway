@@ -1,0 +1,43 @@
+{
+  "name": "my-grpc-gateway",
+  "version": "1.0.0",
+  "description": "基于Express框架的grpc网关",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint ./src",
+    "test": "mocha  --reporter spec  --exit --globals  csvFile,l test/*.test.js",
+    "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --harmony_proxies --exit --reporter spec --globals csvFile,l  test/*.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zwen7652/my-grpc-gateway.git"
+  },
+  "keywords": ["grpc", "grpc-gateway"],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/zwen7652/my-grpc-gateway/issues"
+  },
+  "homepage": "https://github.com/zwen7652/my-grpc-gateway#readme",
+  "dependencies": {
+    "@grpc/proto-loader": "^0.5.3",
+    "grpc": "^1.24.2",
+    "lodash": "^4.17.15",
+    "node-zookeeper-client": "^1.1.0",
+    "protocol-buffers-schema": "^3.3.2"
+  },
+  "devDependencies": {
+    "eslint": "5.16.0",
+    "eslint-config-standard": "12.0.0",
+    "eslint-plugin-import": "2.17.2",
+    "eslint-plugin-markdown": "1.0.0",
+    "eslint-plugin-node": "8.0.1",
+    "eslint-plugin-promise": "4.1.1",
+    "eslint-plugin-react": "^7.17.0",
+    "eslint-plugin-standard": "4.0.0",
+    "express": "^4.17.1",
+    "istanbul": "^1.0.0-alpha.2",
+    "mocha": "^6.2.2",
+    "supertest": "^4.0.2"
+  }
+}

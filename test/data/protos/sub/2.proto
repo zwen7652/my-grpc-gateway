@@ -1,0 +1,22 @@
+
+syntax = "proto3";
+
+package helloWorld;
+
+service Greeter {
+    
+    rpc test (Request) returns (Response) {
+        option (google.api.http) = {
+            get: "/v1/test/{shelf}/books/{book}"
+        };
+    };
+}
+
+message Response {
+    string message = 1;
+}
+
+message Request {
+    int32 shelf = 1;
+    int32 book = 2;
+}
