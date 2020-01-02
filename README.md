@@ -2,11 +2,13 @@
 基于Express框架的grpc网关
 
 ## 安装
+```
 npm install my-grpc-gateway
+```
 
 ## 示例
 
-```
+```javascript
 const Express = require('express');
 const bodyParser = require('body-parser')
 
