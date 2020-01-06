@@ -14,7 +14,7 @@ const bodyParser = require('body-parser')
 
 const app = Express();
 
-const Gateway = require('../src/gateway');
+const Gateway = require('my-grpc-gateway');
 const config = {
     zkConnectionString: '192.168.228.128:2181',
     prefix: '/api', // 所有对外接口的前缀
