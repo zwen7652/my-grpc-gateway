@@ -20,10 +20,15 @@ class Gateway {
      */
     constructor(Express, protoDir, config, credentials) {
         if (!_.isArray(config.rules)) {
-            throw `rules必须是数组`;
+            throw `config.rules必须是数组`;
         }
         this.protoDir = protoDir;
-        this.config = config;
+        this.config = _.cloneDeep(config);
+
+        _.forEach(_.get(this.config, 'allowHeaders'), (v, k) => {
+            this.config.allowHeaders[k] = _.toLower(v);
+        })
+
         this.Express = Express;
 
         // 匹配 url 中参数的正则表达式，如/v1/shelves/{shelf}/books/{book}
@@ -38,10 +43,22 @@ class Gateway {
         };
 
         this.credential = credentials || grpc.credentials.createInsecure();
+        this.cache = new Map();
+    }
 
-        if (this.config.zkConnectionString){
-            this.serviceHelper = new Service(this.config.zkConnectionString);
+    init() {
+        if (!this.config.zkConnectionString) {
+            return;
         }
+        this.serviceHelper = new Service(this.config.zkConnectionString);
+        this.serviceHelper.on('serviceChanged', (servicePath) => {
+            // 当节点发生变化时，清除相关缓存
+            for(let key of this.cache.keys()){
+                if (_.startsWith(key, servicePath)){
+                    this.cache.delete(key);
+                }
+            }
+        })
     }
 
     getFiles(p) {
@@ -119,9 +136,19 @@ class Gateway {
         return _.assign(ret, query, params);
     }
 
-    getMetadata(headers) {
+    getMetadata(req) {
         const ret = new grpc.Metadata();
-        _.forEach(headers, (val, key) => ret.set(key, val));
+        if (this.config.allowHeaders){
+            _.forEach(this.config.allowHeaders, key => {
+                if (key in req.headers){
+                    ret.set(key, req.headers[key]);
+                }
+            })
+        } else {
+            _.forEach(req.headers, (val, key) => ret.set(key, val));
+        } 
+        ret.set('ip', req.header('X-Forwarded-For') || req.header('X-Real-Ip') || req.ip);
+        // ret.set('user-agent', req.header('user-agent'));
         return ret;
     }
 
@@ -159,12 +186,12 @@ class Gateway {
      * 根据匹配到的规则，获取服务信息
      * @param {*} rule 
      */
-    async getServiceHost(rule){
+    async getServiceHost(rule) {
         if (_.isEmpty(rule)) {
             return;
         }
         let host = rule.host;
-        if (!host && rule.serviceName){
+        if (!host && rule.serviceName) {
             return await this.serviceHelper.getServiceInfo(rule.serviceName);
         }
         return host;
@@ -183,12 +210,12 @@ class Gateway {
 
     /**
      * 接收完rpc服务响应的数据之后执行，返回true时不再继续代理
-     * @param {*} serviceHost rpc服务地址
      * @param {*} err rpc服务响应的错误信息
+     * @param {*} serviceHost rpc服务地址
      * @param {*} data rpc服务响应的数据
      * @param {*} res http请求的response对象
      */
-    afterCallService(serviceHost, err, data, res) {
+    afterCallService(err, serviceHost, data, res) {
         return false;
     }
 
@@ -198,14 +225,33 @@ class Gateway {
      * @param {*} requestUrl 请求地址
      * @param {*} res http请求的response对象
      */
-    unknownService(routerUrl, requestUrl, res){
+    unknownService(routerUrl, requestUrl, res) {
         return false;
+    }
+
+    /**
+     * 从本地缓存中获取gRPC client对象
+     * @param {*} packageInfo 
+     * @param {*} servicePath 
+     * @param {*} service 
+     * @param {*} host 
+     */
+    getClient(packageInfo, servicePath, service, host) {
+        const key = `${servicePath}_${service}_${host}`;
+        let client = this.cache.get(key);
+        if (client) {
+            return client;
+        }
+        client = new (packageInfo[service])(host, this.credential);
+        this.cache.set(key, client);
+        return client;
     }
 
     /**
      * 获取Express的Router
      */
     getRouter(debug = true) {
+        this.init();
         const router = this.Express.Router();
 
         // 过滤出 proto 文件
@@ -244,17 +290,17 @@ class Gateway {
                         }
                         // 添加路由
                         router[method](routerUrl, async (req, res) => {
-                            let rule = this.matchRule(url);
-                            let host = await this.getServiceHost(rule);
-                            if (!host){
+                            const rule = this.matchRule(url);
+                            const host = await this.getServiceHost(rule);
+                            if (!host) {
                                 let isHandled = this.unknownService(routerUrl, req.url, res);
-                                if (isHandled){
+                                if (isHandled) {
                                     return;
                                 }
                                 return res.send('未找到对应服务');
                             }
-                            
-                            const metadata = this.getMetadata(req.headers);
+
+                            const metadata = this.getMetadata(req);
 
                             const params = this.convertRequestParams(req.params, req.query, req.body);
 
@@ -262,9 +308,9 @@ class Gateway {
                             if (isHandled) {
                                 return;
                             }
-                            const client = new (protos[idx][sch.package][svcName])(host, this.credential);
+                            const client = this.getClient(protos[idx][sch.package], rule.serviceName, svcName, host);
                             client[svcMethod.name](params, metadata, (err, response) => {
-                                isHandled = this.afterCallService(host, err, response, res);
+                                isHandled = this.afterCallService(err, host, response, res);
                                 if (isHandled) {
                                     return;
                                 }
@@ -272,7 +318,7 @@ class Gateway {
                                     console.error(err);
                                     return res.status(500).send(err);
                                 }
-                                res.send(response);
+                                res.json(response);
                             })
                         })
                     })

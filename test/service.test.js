@@ -6,7 +6,7 @@ const Service = require('../src/service');
 
 describe('service测试', () => {
 
-    it('Gateway - getServiceInfo - 平滑负载均衡', async() => {
+    it('Gateway - getServiceInfo - 平滑加权轮询负载均衡', async() => {
         const service = new Service('192.168.228.128:2181');
         service.serviceMap = {
             'test': {

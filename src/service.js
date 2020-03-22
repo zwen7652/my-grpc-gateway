@@ -1,10 +1,12 @@
 
+const Event = require('events').EventEmitter;
 const _ = require('lodash');
 
 const zkHelper = require('./zkHelper');
 
-class ServiceDiscover {
+class ServiceDiscover extends Event {
     constructor(zkConnectionString) {
+        super();
         this.serviceHelper = new zkHelper(zkConnectionString, this.zkWatcher.bind(this));
 
         this.serviceMap = {};
@@ -32,6 +34,7 @@ class ServiceDiscover {
                 throw `解析服务地址${item}失败，地址格式非正确的JSON格式`;
             }
         }
+        this.emit('serviceChanged', path);
     }
 
     async getServiceInfo(name) {
@@ -45,7 +48,7 @@ class ServiceDiscover {
         if (services.length == 1) {
             return services[0].host;
         } 
-        // 平滑负载均衡
+        // 平滑加权轮询负载均衡
         for(let item of services){
             item.currentWeight += item.weight;
         }

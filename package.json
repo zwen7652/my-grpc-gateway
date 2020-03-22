@@ -1,6 +1,6 @@
 {
   "name": "my-grpc-gateway",
-  "version": "1.0.01",
+  "version": "1.0.2",
   "description": "基于Express框架的grpc网关",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,10 @@
     "type": "git",
     "url": "git+https://github.com/zwen7652/my-grpc-gateway.git"
   },
-  "keywords": ["grpc", "grpc-gateway"],
+  "keywords": [
+    "grpc",
+    "grpc-gateway"
+  ],
   "author": "",
   "license": "ISC",
   "bugs": {

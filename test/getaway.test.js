@@ -20,6 +20,7 @@ describe('网关测试', () => {
     };
     const protoDir = __dirname + '/data/protos';
     const gateway = new Gateway(Express, protoDir, config);
+    gateway.init();
 
     it('Gateway - constructor - rules不正确', () => {
         let err;
@@ -28,7 +29,7 @@ describe('网关测试', () => {
         } catch (error) {
             err = error;
         }
-        assert.deepEqual(err, 'rules必须是数组');
+        assert.deepEqual(err, 'config.rules必须是数组');
     })
 
     it('Gateway - constructor - zookeeper', () => {
@@ -36,6 +37,7 @@ describe('网关测试', () => {
             zkConnectionString: 'localhost:2181',
             rules: config.rules
         });
+        g.init();
         assert.deepEqual(g.serviceHelper instanceof Service, true);
     })
 
